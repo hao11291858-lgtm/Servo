@@ -25,7 +25,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "servo.h"
-#include "timer_led.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -92,18 +91,22 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 150);
-	HAL_TIM_Base_Start_IT(&htim2);
+  /* Keep the 1500 us initial pulse configured by MX_TIM3_Init(). */
+  if (HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  {		
-		void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
-    servo_run(); 
-    /* Reject an overlong line instead of executing its first 3 bytes. */           
+  {
+    servo_run();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
