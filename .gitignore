@@ -15,3 +15,13 @@
 *.bak
 *.tmp
 *~
+
+# Optional CMSIS packages unused by this STM32F103 project
+/Drivers/CMSIS/Core/
+/Drivers/CMSIS/Core_A/
+/Drivers/CMSIS/docs/
+/Drivers/CMSIS/DSP/
+/Drivers/CMSIS/Lib/
+/Drivers/CMSIS/NN/
+/Drivers/CMSIS/RTOS/
+/Drivers/CMSIS/RTOS2/
