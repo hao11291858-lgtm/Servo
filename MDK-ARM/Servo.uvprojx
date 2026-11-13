@@ -631,6 +631,11 @@
               <FileType>5</FileType>
               <FilePath>..\servo and time _led\usart_transport.h</FilePath>
             </File>
+            <File>
+              <FileName>debug_print.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\servo and time _led\debug_print.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -1,14 +1,27 @@
 # Keil build output
 /MDK-ARM/Servo/
-/MDK-ARM/*.lst
-/MDK-ARM/*.build_log.htm
-/MDK-ARM/*.log
+*.o
+*.d
+*.dep
+*.crf
+*.axf
+*.hex
+*.map
+*.lst
+*.lnp
+*.iex
+*.log
+*.build_log.htm
 
 # Local IDE and debugger settings
 *.uvguix.*
 *.uvgui.*
 *.uvoptx
+*.dbgconf
 /MDK-ARM/DebugConfig/
+/MDK-ARM/JLink*.txt
+/MDK-ARM/JLink*.ini
+/MDK-ARM/EventRecorderStub*.scvd
 .mxproject
 
 # Editor backup files

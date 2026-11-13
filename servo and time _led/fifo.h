@@ -4,8 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct
-{
+typedef struct {
     uint8_t *storage;
     uint16_t capacity;
     uint16_t read_index;
@@ -13,7 +12,6 @@ typedef struct
     uint16_t count;
 } Fifo;
 
-/* If an interrupt and the main loop share a FIFO, the caller serializes access. */
 void Fifo_Init(Fifo *fifo, uint8_t *storage, uint16_t capacity);
 void Fifo_Clear(Fifo *fifo);
 bool Fifo_Push(Fifo *fifo, uint8_t value);

@@ -6,6 +6,6 @@
 #define SERVO_MAX_ANGLE 180U
 
 HAL_StatusTypeDef Servo_Init(void);
-void Servo_SetAngle(uint16_t angle);
+void              Servo_SetAngle(uint16_t angle);
 
 #endif

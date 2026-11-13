@@ -3,87 +3,43 @@
 #include "usart.h"
 
 #define RX_FIFO_SIZE 64U
-#define RX_IDLE_MS   100U
 
-static Fifo rx_fifo;
+static Fifo    rx_fifo;
 static uint8_t rx_storage[RX_FIFO_SIZE];
-static uint8_t rx_byte;
-static volatile uint32_t last_rx_tick;
-static volatile bool rx_active;
-static volatile bool rx_lost;
 
-HAL_StatusTypeDef UsartTransport_Init(void)
+void UsartTransport_Init(void)
 {
     Fifo_Init(&rx_fifo, rx_storage, sizeof(rx_storage));
-    rx_active = false;
-    rx_lost = false;
-    return HAL_UART_Receive_IT(&huart1, &rx_byte, 1U);
+    __HAL_UART_CLEAR_OREFLAG(&huart1);
+    __HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE);
+    __HAL_UART_ENABLE_IT(&huart1, UART_IT_ERR);
 }
 
-UsartTransportEvent UsartTransport_Read(uint8_t *byte)
+bool UsartTransport_Read(uint8_t *byte)
 {
-    UsartTransportEvent event = USART_TRANSPORT_NO_DATA;
+    bool     received;
     uint32_t interrupt_state = __get_PRIMASK();
 
-    /* The USART interrupt also accesses the FIFO and receive flags. */
+    /* Serialize the FIFO pop with the interrupt-side push. */
     __disable_irq();
-    if (rx_lost)
-    {
-        Fifo_Clear(&rx_fifo);
-        rx_lost = false;
-        event = USART_TRANSPORT_RX_ERROR;
-    }
-    else if (Fifo_Pop(&rx_fifo, byte))
-    {
-        event = USART_TRANSPORT_BYTE;
-    }
-    else if (rx_active && (HAL_GetTick() - last_rx_tick >= RX_IDLE_MS))
-    {
-        rx_active = false;
-        event = USART_TRANSPORT_IDLE;
-    }
+    received = Fifo_Pop(&rx_fifo, byte);
     __set_PRIMASK(interrupt_state);
 
-    return event;
+    return received;
 }
 
-HAL_StatusTypeDef UsartTransport_Send(const uint8_t *data, uint16_t size,
-                                     uint32_t timeout_ms)
+void UsartTransport_IRQHandler(void)
 {
-    return HAL_UART_Transmit(&huart1, data, size, timeout_ms);
-}
+    uint32_t status = READ_REG(huart1.Instance->SR);
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *uart)
-{
-    /* HAL can report a byte and an error in the same interrupt. */
-    if (uart != &huart1 || uart->ErrorCode != HAL_UART_ERROR_NONE)
-    {
+    if ((status & (USART_SR_PE | USART_SR_FE | USART_SR_NE | USART_SR_ORE)) != 0U) {
+        /* Reading SR then DR clears receive errors; discard the bad byte. */
+        (void)READ_REG(huart1.Instance->DR);
         return;
     }
 
-    last_rx_tick = HAL_GetTick();
-    rx_active = true;
-    if (!Fifo_Push(&rx_fifo, rx_byte))
-    {
-        rx_lost = true;
+    if ((status & USART_SR_RXNE) != 0U) {
+        /* A full FIFO drops the new byte; RXNE interrupts remain enabled. */
+        Fifo_Push(&rx_fifo, (uint8_t)READ_REG(huart1.Instance->DR));
     }
-
-    HAL_UART_Receive_IT(uart, &rx_byte, 1U);
-}
-
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *uart)
-{
-    if (uart != &huart1)
-    {
-        return;
-    }
-
-    last_rx_tick = HAL_GetTick();
-    rx_active = true;
-    rx_lost = true;
-
-    /* USART1 uses interrupt reception only. Restart it after the error. */
-    HAL_UART_AbortReceive(uart);
-    __HAL_UART_CLEAR_OREFLAG(uart);
-    HAL_UART_Receive_IT(uart, &rx_byte, 1U);
 }
