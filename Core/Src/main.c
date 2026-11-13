@@ -25,6 +25,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "servo.h"
+#include "timer_led.h"
+#include "usart_transport.h"
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,6 +59,48 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void ProcessServoCommand(void)
+{
+  static uint16_t angle = 0;
+  static bool has_digit = false;
+  static bool discard_command = false;
+  uint8_t byte;
+  UsartTransportEvent event = UsartTransport_Read(&byte);
+
+  if (event == USART_TRANSPORT_NO_DATA)
+  {
+    return;
+  }
+
+  if (event == USART_TRANSPORT_RX_ERROR)
+  {
+    discard_command = true;
+    return;
+  }
+
+  if (event == USART_TRANSPORT_IDLE || byte == '\r' || byte == '\n')
+  {
+    if (has_digit && !discard_command)
+    {
+      Servo_SetAngle(angle);
+    }
+    angle = 0;
+    has_digit = false;
+    discard_command = false;
+    return;
+  }
+
+  if (!discard_command && byte >= '0' && byte <= '9')
+  {
+    angle = angle * 10U + (byte - '0');
+    has_digit = true;
+    discard_command = angle > SERVO_MAX_ANGLE;
+  }
+  else
+  {
+    discard_command = true;
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -91,8 +136,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  /* Keep the 1500 us initial pulse configured by MX_TIM3_Init(). */
-  if (HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1) != HAL_OK)
+  if (Servo_Init() != HAL_OK || UsartTransport_Init() != HAL_OK)
   {
     Error_Handler();
   }
@@ -106,10 +150,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    servo_run();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    ProcessServoCommand();
   }
   /* USER CODE END 3 */
 }
